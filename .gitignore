@@ -1,0 +1,12 @@
+/target
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+# Archives and backups never belong in the repository
+/backups/
+*.zip
+*.sql.gz
+*.gpg

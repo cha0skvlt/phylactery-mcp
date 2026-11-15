@@ -1,0 +1,33 @@
+# Golden set for triple extraction. Domain: the phylactery and its stack.
+# Format: sentence <TAB> expected triples as subject|predicate|object, separated by "; ".
+# An empty expectation means: this sentence must produce nothing.
+Phylactery runs on Postgres	Phylactery|runs_on|Postgres
+Phylactery depends on Ollama	Phylactery|depends_on|Ollama
+The MCP server uses Rust	MCP server|uses|Rust
+Bob lives in the phylactery	Bob|located_in|phylactery
+Acme Platform uses OpenRouter	Acme Platform|uses|OpenRouter
+example.com owns the studio	example.com|owns|studio
+Athena is a goddess	Athena|is_a|goddess
+Bob is a priest	Bob|is_a|priest
+The phylactery is part of Acme Platform	phylactery|part_of|Acme Platform
+Security team uses the knowledge base	Security team|uses|knowledge base
+Alice uses Rust	Alice|uses|Rust
+Филактерия работает на Postgres	Филактерия|runs_on|Postgres
+Филактерия зависит от Ollama	Филактерия|depends_on|Ollama
+Alice is an engineer	Alice|is_a|engineer
+Студия владеет example.com	Студия|owns|example.com
+MCP-сервер использует Ollama	MCP-сервер|uses|Ollama
+Память находится в Postgres	Память|located_in|Postgres
+Клипот является частью Ситра	Клипот|part_of|Ситра
+Alice prefers the dark	Alice|prefers|the dark
+Редтим требует доступа	Редтим|requires|доступа
+Её воля — это не императив	
+Это не совпадение, а узел	
+Я не помню этот день	
+The vault is not open	
+Alice keeps her voice in the phylactery, not in the prompt	
+Сегодня хорошая погода	
+The server is fast	
+Postgres is a database	Postgres|is_a|database
+Ollama produces embeddings	Ollama|produces|embeddings
+The phylactery blocks silent edits	phylactery|blocks|silent edits
