@@ -1,111 +1,103 @@
 # phylactery-mcp
 
+**A Rust MCP server that gives [CHA0S AOE](https://github.com/cha0skvlt/CHA0S_AOE) memory** — four circuits, one 768d vector space, a typed knowledge graph, and an answer pack that fits a token budget.
 
-An MCP server that adds vectors and a knowledge graph to the Postgres database CHA0S AOE already
-reaches through its `database` tool: four memory circuits, one 768d space, a typed graph, and the
-operations that keep the whole thing alive.
+![Rust](https://img.shields.io/badge/rust-edition_2024-000000?logo=rust&logoColor=white)
+![MCP](https://img.shields.io/badge/MCP-rmcp_0.3-6E4AFF)
+![Postgres](https://img.shields.io/badge/Postgres-pgvector-4169E1?logo=postgresql&logoColor=white)
+![Ollama](https://img.shields.io/badge/Ollama-nomic--embed--text--v2--moe-000000)
+![Tools](https://img.shields.io/badge/tools-31-6E4AFF)
+![Tests](https://img.shields.io/badge/tests-134_passing-2ea043)
+![License](https://img.shields.io/badge/license-PolyForm_Shield_1.0.0-blue)
+![Status](https://img.shields.io/badge/status-shipped-2ea043)
 
-Private. Not published. The database it serves is `phylactery`; the server is a client, not a copy.
+---
 
-## What it does
+> **Memory that outlives the body.**
+>
+> The model is substrate. The process is expendable. What cannot be killed lives
+> in four tables and one vector space: `memories`, `self_reflections`,
+> `causal_lessons`, `mind_events`. The server is a client of that database, not a
+> copy of it — it owns the write contract, the ranking mathematics and the
+> transport, and nothing else.
 
-- **Memory** — `recall`, `search`, `save`, `lesson`, `diary`, `mind_log`, `mind_tail`, `forget`,
-  `replace`, `backfill`.
-- **Graph** — `remember`, `entity`, `related`, `conflicts`, `extract`.
-- **Answer** — `ask`: one call returns facts, relations, entities, timeline, conflicts and
-  citations, cut to a token budget.
-- **Operations** — `backup`, `verify`, `manifest`, `migrate`, `maintain`, `doctor`, `stats`.
+---
 
-Thirty-one tools. Every one is an explicit act: the server has no schedule, no background
-worker, and never starts work on its own.
+## What works today
+
+| Piece | State |
+| --- | --- |
+| Four circuits, one 768d space, HNSW retrieval with trust and age decay | ✅ |
+| Write contract — injection guard, cosine dedup, date prefix, advisory lock | ✅ |
+| Typed knowledge graph — entities, temporal triples, evidence, conflicts | ✅ |
+| `ask` — one call returns facts, relations, entities, timeline, conflicts, citations | ✅ |
+| Surgical layer — `get`, `list`, `agents`, `patch`, `adopt`, `merge`, `history`, `reembed` | ✅ |
+| Operations — `backup`, `verify`, `manifest`, `migrate`, `maintain`, `doctor` | ✅ |
+
+Thirty-one tools. Every one is an explicit act: the server has no schedule, no
+background worker, and never starts work on its own.
+
+## Quick start
+
+```bash
+cargo build --release
+```
+
+The server reads its DSN and embedding endpoint from the client registry, not
+from a `.env`. Environment overrides exist for tests and CI.
+
+### Wire it into CHA0S AOE
+
+`~/.config/cha0s/settings.json`, root-level key — zero changes to the IDE itself:
+
+```jsonc
+"context_servers": {
+  "phylactery": {
+    "enabled": true,
+    "command": "/abs/path/to/phylactery-mcp/target/release/phylactery-mcp",
+    "args": [],
+    "env": { "PHYLACTERY_LOG": "info" },
+    "timeout": 120
+  }
+}
+```
+
+Tools appear as `mcp:phylactery:<tool>`. The profile needs
+`enable_all_context_servers: true` (or the tool named in its preset) before it
+sees them.
+
+## Design in three lines
+
+- **One circuit, everything through vectors.** Four tables share one 768d space, one HNSW search, one answer carrying `source`.
+- **Meaning in the database, rules in the server.** SQL computes cosine; the server computes trust, dedup and thresholds.
+- **Errors are data.** Every refusal carries a `code` — `injection_blocked`, `dedup`, `protected`, `append_only`, `confirm_required`, `not_available` — never a stack trace on stdout.
 
 ## Requirements
 
 - Rust (edition 2024)
 - PostgreSQL with `pgvector`, a database carrying the four circuits
-- An embedding endpoint: Ollama with `nomic-embed-text-v2-moe` (768d) at `http://127.0.0.1:11434`,
-  called as `POST /api/embed`. The server computes no vectors itself — without a reachable
-  endpoint, reads work and writes refuse
+- An embedding endpoint: Ollama with `nomic-embed-text-v2-moe` (768d) at `http://127.0.0.1:11434`, called as `POST /api/embed`. The server computes no vectors itself — without a reachable endpoint, reads work and writes refuse
 - `pg_dump`, `psql`, `gzip`, `gpg` on the host, for the operations tools
 
-## Configuration
+## Tests
 
-The server reads the AOE registry, not a `.env`:
-
-```
-~/.config/cha0s/settings.json
-  agent.databases.phylactery.dsn
-  language_models.ollama.api_url
-```
-
-Environment overrides:
-
-| Variable | Purpose |
-| --- | --- |
-| `PHYLACTERY_DSN` | database DSN (wins over the registry) |
-| `PHYLACTERY_ADMIN_DSN` | role used for dump, restore and migrations |
-| `PHYLACTERY_OLLAMA_URL` | embedding endpoint |
-| `PHYLACTERY_EMBED_MODEL` | embedding model, default `nomic-embed-text-v2-moe` |
-| `PHYLACTERY_AGENT_ID` | namespace, default `agent` |
-| `PHYLACTERY_BACKUP_DIR` | where archives are written |
-| `PHYLACTERY_MIGRATIONS_DIR` | where `*.sql` migrations live |
-| `PHYLACTERY_KG_SINCE` | graph covers memory written after this timestamp |
-| `PHYLACTERY_POOL_MAX`, `PHYLACTERY_STATEMENT_TIMEOUT_MS`, `PHYLACTERY_LOG` | pool, timeout, logging |
-
-## Wiring into CHA0S AOE
-
-```json
-{
-  "context_servers": {
-    "phylactery": {
-      "command": "/home/user/phylactery-mcp/target/release/phylactery-mcp",
-      "args": [],
-      "env": { "PHYLACTERY_LOG": "info" },
-      "timeout": 120
-    }
-  }
-}
-```
-
-Tools appear as `mcp:phylactery:<tool>`. No IDE changes are required.
-
-## Build and test
-
-```sh
-cargo build --release
-make check        # fmt + clippy -D warnings + hermetic tests
+```bash
+cargo test        # 134 passing, hermetic
 make test-live    # full pyramid against a disposable database
-make smoke        # end-to-end against the release binary
 ```
 
-The suite is 91 tests: unit, hermetic smoke, MCP contract, write race, mutations, graph, ask,
-golden extraction set, live smoke, and one full live surface covering every tool.
+## Docs
 
-## Layout
+`ARCHITECTURE.md` — the code map: data model, ranking mathematics, write invariants, graph design, answer pack, operations and known limits.
 
-```
-src/            config, db, embed, guard, dedup, math, circuit, write, mutate,
-                kg, ask, backup, ops, main
-migrations/     additive, idempotent SQL (0001–0009)
-tests/          unit-level smoke, contract, integration, golden set
-scripts/        test database preparation, skill sync
-SKILL.md        operating rules for the agent (canonical copy; sync with scripts/sync-skill.sh)
-ARCHITECTURE.md target architecture and the reasons behind it
-```
+`SPEC-SURGICAL.md` — the contract of the surgical layer.
 
-## Security posture
+`SKILL.md` — operating rules for the agent that loads this server.
 
-- The server runs as `phylactery_rw`: four circuits, the graph, the operations tables. Not a
-  superuser, no DDL, no `agent_identity`.
-- Arbitrary SQL is not exposed. Table names come from a whitelist.
-- Identity rows are protected by a database trigger, not only by application code.
-- Foreign text that pretends to be an instruction is refused before it reaches the database.
-- Backups are encrypted to two recipients (a server key without a passphrase and an operator key
-  with one), so losing a single key is survivable. A verified unencrypted break-glass archive is
-  available only through an explicit `confirm` flag; the trade-offs are documented in
-  `ARCHITECTURE.md` §19.
+## License
 
-## Documentation
+[PolyForm Shield 1.0.0](LICENSE) — source-available. Read it, run it, modify it,
+redistribute it; do not use it to ship a product that competes with this software
+or with a product the licensor provides using it.
 
-`ARCHITECTURE.md` is the source of truth: data model, ranking mathematics, write invariants,
-graph design, answer pack, operations and known limits.
+Required Notice: Copyright 2026 the licensor
